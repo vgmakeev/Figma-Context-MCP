@@ -41,6 +41,8 @@ export interface SimplifiedLayout {
   };
   boxSizing?: "border-box" | "content-box"; // strokesIncludedInLayout - whether strokes affect layout calculations
   reverseZIndex?: boolean; // itemReverseZIndex - whether first child draws on top
+  clipsContent?: boolean; // clipsContent - whether content is clipped to bounds (overflow: hidden vs visible)
+  scrollBehavior?: "scrolls" | "fixed" | "sticky"; // scrollBehavior - how layer behaves when parent scrolls (for prototypes)
   grid?: {
     columns?: number; // gridColumnCount
     rows?: number; // gridRowCount
@@ -219,6 +221,11 @@ function buildSimplifiedFrameValues(n: FigmaDocumentNode): SimplifiedLayout | { 
   if (n.overflowDirection?.includes("VERTICAL")) overflowScroll.push("y");
   if (overflowScroll.length > 0) frameValues.overflowScroll = overflowScroll;
 
+  // Clips content (overflow: hidden vs visible)
+  if (n.clipsContent !== undefined) {
+    frameValues.clipsContent = n.clipsContent;
+  }
+
   if (frameValues.mode === "none") {
     return frameValues;
   }
@@ -377,6 +384,14 @@ function buildSimplifiedLayoutValues(
     horizontal: convertSizing(n.layoutSizingHorizontal),
     vertical: convertSizing(n.layoutSizingVertical),
   };
+
+  // Scroll behavior (for prototypes) - how element behaves when parent scrolls
+  if (n.scrollBehavior && n.scrollBehavior !== "SCROLLS") {
+    // Only include if not default SCROLLS behavior
+    layoutValues.scrollBehavior = 
+      n.scrollBehavior === "FIXED" ? "fixed" :
+      n.scrollBehavior === "STICKY_SCROLLS" ? "sticky" : undefined;
+  }
 
   // Extract autolayout constraints (minWidth, maxWidth, minHeight, maxHeight)
   // These properties are only applicable for auto-layout frames or direct children of auto-layout frames
