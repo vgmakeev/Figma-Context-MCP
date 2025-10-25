@@ -7,12 +7,14 @@ import type {
 import { generateCSSShorthand, pixelRound } from "~/utils/common.js";
 
 export interface SimplifiedLayout {
-  mode: "none" | "row" | "column";
+  mode: "none" | "row" | "column" | "grid";
   justifyContent?: "flex-start" | "flex-end" | "center" | "space-between" | "baseline" | "stretch";
   alignItems?: "flex-start" | "flex-end" | "center" | "space-between" | "baseline" | "stretch";
   alignSelf?: "flex-start" | "flex-end" | "center" | "stretch";
   wrap?: boolean;
   gap?: string;
+  rowGap?: string; // counterAxisSpacing - distance between wrapped rows
+  alignContent?: "auto" | "space-between"; // counterAxisAlignContent - alignment of wrapped rows
   locationRelativeToParent?: {
     x: number;
     y: number;
@@ -27,11 +29,33 @@ export interface SimplifiedLayout {
     horizontal?: "fixed" | "fill" | "hug";
     vertical?: "fixed" | "fill" | "hug";
   };
+  frameSizing?: {
+    primary: "fixed" | "auto"; // primaryAxisSizingMode - how frame sizes along primary axis
+    counter: "fixed" | "auto"; // counterAxisSizingMode - how frame sizes along counter axis
+  };
   constraints?: {
     minWidth?: number;
     maxWidth?: number;
     minHeight?: number;
     maxHeight?: number;
+  };
+  boxSizing?: "border-box" | "content-box"; // strokesIncludedInLayout - whether strokes affect layout calculations
+  reverseZIndex?: boolean; // itemReverseZIndex - whether first child draws on top
+  grid?: {
+    columns?: number; // gridColumnCount
+    rows?: number; // gridRowCount
+    columnGap?: string; // gridColumnGap
+    rowGap?: string; // gridRowGap
+    templateColumns?: string; // gridColumnsSizing - CSS grid-template-columns
+    templateRows?: string; // gridRowsSizing - CSS grid-template-rows
+  };
+  gridPlacement?: {
+    columnSpan?: number; // gridColumnSpan
+    rowSpan?: number; // gridRowSpan
+    columnStart?: number; // gridColumnAnchorIndex + 1 (CSS is 1-based)
+    rowStart?: number; // gridRowAnchorIndex + 1
+    horizontalAlign?: "auto" | "start" | "center" | "end"; // gridChildHorizontalAlign
+    verticalAlign?: "auto" | "start" | "center" | "end"; // gridChildVerticalAlign
   };
   overflowScroll?: ("x" | "y")[];
   position?: "absolute";
@@ -124,6 +148,34 @@ function convertSizing(
   return undefined;
 }
 
+// interpret frame sizing mode
+function convertSizingMode(
+  mode?: HasFramePropertiesTrait["primaryAxisSizingMode"] | 
+         HasFramePropertiesTrait["counterAxisSizingMode"],
+): "fixed" | "auto" | undefined {
+  if (mode === "FIXED") return "fixed";
+  if (mode === "AUTO") return "auto";
+  return undefined;
+}
+
+// interpret grid alignment
+function convertGridAlign(
+  align?: "AUTO" | "MIN" | "CENTER" | "MAX"
+): "auto" | "start" | "center" | "end" | undefined {
+  switch (align) {
+    case "AUTO":
+      return "auto";
+    case "MIN":
+      return "start";
+    case "CENTER":
+      return "center";
+    case "MAX":
+      return "end";
+    default:
+      return undefined;
+  }
+}
+
 function getDirection(
   axis: "primary" | "counter",
   mode: "row" | "column",
@@ -157,7 +209,9 @@ function buildSimplifiedFrameValues(n: FigmaDocumentNode): SimplifiedLayout | { 
         ? "none"
         : n.layoutMode === "HORIZONTAL"
           ? "row"
-          : "column",
+          : n.layoutMode === "VERTICAL"
+            ? "column"
+            : "grid",
   };
 
   const overflowScroll: SimplifiedLayout["overflowScroll"] = [];
@@ -166,6 +220,55 @@ function buildSimplifiedFrameValues(n: FigmaDocumentNode): SimplifiedLayout | { 
   if (overflowScroll.length > 0) frameValues.overflowScroll = overflowScroll;
 
   if (frameValues.mode === "none") {
+    return frameValues;
+  }
+
+  // Grid layout handling
+  if (frameValues.mode === "grid") {
+    const grid: SimplifiedLayout["grid"] = {};
+    
+    if (n.gridColumnCount !== undefined) grid.columns = n.gridColumnCount;
+    if (n.gridRowCount !== undefined) grid.rows = n.gridRowCount;
+    if (n.gridColumnGap !== undefined) grid.columnGap = `${n.gridColumnGap}px`;
+    if (n.gridRowGap !== undefined) grid.rowGap = `${n.gridRowGap}px`;
+    if (n.gridColumnsSizing) grid.templateColumns = n.gridColumnsSizing;
+    if (n.gridRowsSizing) grid.templateRows = n.gridRowsSizing;
+    
+    if (Object.keys(grid).length > 0) {
+      frameValues.grid = grid;
+    }
+    
+    // Grid frames don't use flex properties, but still need padding and common properties
+    // Add padding
+    if (n.paddingTop || n.paddingBottom || n.paddingLeft || n.paddingRight) {
+      frameValues.padding = generateCSSShorthand({
+        top: n.paddingTop ?? 0,
+        right: n.paddingRight ?? 0,
+        bottom: n.paddingBottom ?? 0,
+        left: n.paddingLeft ?? 0,
+      });
+    }
+    
+    // Add common frame properties (sizing modes, box sizing, etc.)
+    // These apply to both flex and grid
+    const primarySizing = convertSizingMode(n.primaryAxisSizingMode);
+    const counterSizing = convertSizingMode(n.counterAxisSizingMode);
+    
+    if (primarySizing || counterSizing) {
+      frameValues.frameSizing = {
+        primary: primarySizing || "auto",
+        counter: counterSizing || "auto",
+      };
+    }
+
+    if (n.strokesIncludedInLayout !== undefined) {
+      frameValues.boxSizing = n.strokesIncludedInLayout ? "border-box" : "content-box";
+    }
+
+    if (n.itemReverseZIndex === true) {
+      frameValues.reverseZIndex = true;
+    }
+    
     return frameValues;
   }
 
@@ -185,6 +288,21 @@ function buildSimplifiedFrameValues(n: FigmaDocumentNode): SimplifiedLayout | { 
   // Only include wrap if it's set to WRAP, since flex layouts don't default to wrapping
   frameValues.wrap = n.layoutWrap === "WRAP" ? true : undefined;
   frameValues.gap = n.itemSpacing ? `${n.itemSpacing ?? 0}px` : undefined;
+  
+  // Wrapping layout properties (only for WRAP mode)
+  if (n.layoutWrap === "WRAP") {
+    // Row gap (distance between wrapped rows)
+    if (n.counterAxisSpacing !== undefined) {
+      frameValues.rowGap = `${n.counterAxisSpacing}px`;
+    }
+    
+    // Align content (how wrapped rows are distributed)
+    if (n.counterAxisAlignContent) {
+      frameValues.alignContent = 
+        n.counterAxisAlignContent === "SPACE_BETWEEN" ? "space-between" : "auto";
+    }
+  }
+  
   // gather padding
   if (n.paddingTop || n.paddingBottom || n.paddingLeft || n.paddingRight) {
     frameValues.padding = generateCSSShorthand({
@@ -195,17 +313,65 @@ function buildSimplifiedFrameValues(n: FigmaDocumentNode): SimplifiedLayout | { 
     });
   }
 
+  // Frame sizing modes (how frame itself sizes)
+  const primarySizing = convertSizingMode(n.primaryAxisSizingMode);
+  const counterSizing = convertSizingMode(n.counterAxisSizingMode);
+  
+  if (primarySizing || counterSizing) {
+    frameValues.frameSizing = {
+      primary: primarySizing || "auto",
+      counter: counterSizing || "auto",
+    };
+  }
+
+  // Box sizing (whether strokes are included in layout calculations)
+  if (n.strokesIncludedInLayout !== undefined) {
+    frameValues.boxSizing = n.strokesIncludedInLayout ? "border-box" : "content-box";
+  }
+
+  // Z-index stacking order
+  if (n.itemReverseZIndex === true) {
+    frameValues.reverseZIndex = true;
+  }
+
   return frameValues;
 }
 
 function buildSimplifiedLayoutValues(
   n: FigmaDocumentNode,
   parent: FigmaDocumentNode | undefined,
-  mode: "row" | "column" | "none",
+  mode: "row" | "column" | "grid" | "none",
 ): SimplifiedLayout | undefined {
   if (!isLayout(n)) return undefined;
 
   const layoutValues: SimplifiedLayout = { mode };
+
+  // Grid child properties
+  if (isFrame(parent) && parent.layoutMode === "GRID") {
+    const gridPlacement: SimplifiedLayout["gridPlacement"] = {};
+    
+    if (n.gridColumnSpan !== undefined) gridPlacement.columnSpan = n.gridColumnSpan;
+    if (n.gridRowSpan !== undefined) gridPlacement.rowSpan = n.gridRowSpan;
+    
+    // Convert 0-based index to 1-based CSS grid line number
+    if (n.gridColumnAnchorIndex !== undefined) {
+      gridPlacement.columnStart = n.gridColumnAnchorIndex + 1;
+    }
+    if (n.gridRowAnchorIndex !== undefined) {
+      gridPlacement.rowStart = n.gridRowAnchorIndex + 1;
+    }
+    
+    if (n.gridChildHorizontalAlign) {
+      gridPlacement.horizontalAlign = convertGridAlign(n.gridChildHorizontalAlign);
+    }
+    if (n.gridChildVerticalAlign) {
+      gridPlacement.verticalAlign = convertGridAlign(n.gridChildVerticalAlign);
+    }
+    
+    if (Object.keys(gridPlacement).length > 0) {
+      layoutValues.gridPlacement = gridPlacement;
+    }
+  }
 
   layoutValues.sizing = {
     horizontal: convertSizing(n.layoutSizingHorizontal),
