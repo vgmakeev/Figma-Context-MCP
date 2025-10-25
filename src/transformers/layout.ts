@@ -27,6 +27,12 @@ export interface SimplifiedLayout {
     horizontal?: "fixed" | "fill" | "hug";
     vertical?: "fixed" | "fill" | "hug";
   };
+  constraints?: {
+    minWidth?: number;
+    maxWidth?: number;
+    minHeight?: number;
+    maxHeight?: number;
+  };
   overflowScroll?: ("x" | "y")[];
   position?: "absolute";
 }
@@ -205,6 +211,17 @@ function buildSimplifiedLayoutValues(
     horizontal: convertSizing(n.layoutSizingHorizontal),
     vertical: convertSizing(n.layoutSizingVertical),
   };
+
+  // Extract autolayout constraints (minWidth, maxWidth, minHeight, maxHeight)
+  // These properties are only applicable for auto-layout frames or direct children of auto-layout frames
+  const constraints: SimplifiedLayout["constraints"] = {};
+  if (n.minWidth !== undefined) constraints.minWidth = pixelRound(n.minWidth);
+  if (n.maxWidth !== undefined) constraints.maxWidth = pixelRound(n.maxWidth);
+  if (n.minHeight !== undefined) constraints.minHeight = pixelRound(n.minHeight);
+  if (n.maxHeight !== undefined) constraints.maxHeight = pixelRound(n.maxHeight);
+  if (Object.keys(constraints).length > 0) {
+    layoutValues.constraints = constraints;
+  }
 
   // Only include positioning-related properties if parent layout isn't flex or if the node is absolute
   if (
