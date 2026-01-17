@@ -1,102 +1,135 @@
-<a href="https://www.framelink.ai/?utm_source=github&utm_medium=referral&utm_campaign=readme" target="_blank" rel="noopener">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://www.framelink.ai/github/HeaderDark.png" />
-    <img alt="Framelink" src="https://www.framelink.ai/github/HeaderLight.png" />
-  </picture>
-</a>
+# Figma Context MCP - Extended Layout Edition
 
-<div align="center">
-  <h1>Framelink MCP for Figma</h1>
-  <p>
-    🌐 Available in:
-    <a href="README.ko.md">한국어 (Korean)</a> |
-    <a href="README.ja.md">日本語 (Japanese)</a> |
-    <a href="README.zh-cn.md">简体中文 (Simplified Chinese)</a> |
-    <a href="README.zh-tw.md">繁體中文 (Traditional Chinese)</a>
-  </p>
-  <h3>Give your coding agent access to your Figma data.<br/>Implement designs in any framework in one-shot.</h3>
-  <a href="https://npmcharts.com/compare/figma-developer-mcp?interval=30">
-    <img alt="weekly downloads" src="https://img.shields.io/npm/dm/figma-developer-mcp.svg">
-  </a>
-  <a href="https://github.com/GLips/Figma-Context-MCP/blob/main/LICENSE">
-    <img alt="MIT License" src="https://img.shields.io/github/license/GLips/Figma-Context-MCP" />
-  </a>
-  <a href="https://framelink.ai/discord">
-    <img alt="Discord" src="https://img.shields.io/discord/1352337336913887343?color=7389D8&label&logo=discord&logoColor=ffffff" />
-  </a>
-  <br />
-  <a href="https://twitter.com/glipsman">
-    <img alt="Twitter" src="https://img.shields.io/twitter/url?url=https%3A%2F%2Fx.com%2Fglipsman&label=%40glipsman" />
-  </a>
-</div>
+Fork of [GLips/Figma-Context-MCP](https://github.com/GLips/Figma-Context-MCP) with enhanced Auto Layout and prototype data extraction.
 
-<br/>
+## Why This Fork?
 
-Give [Cursor](https://cursor.sh/) and other AI-powered coding tools access to your Figma files with this [Model Context Protocol](https://modelcontextprotocol.io/introduction) server.
+The original Framelink MCP provides basic layout information, but AI agents often struggle with:
+- Complex flex layouts with wrapping
+- CSS Grid layouts
+- Min/max constraints
+- Scroll behavior in prototypes
+- Proper overflow handling
 
-When Cursor has access to Figma design data, it's **way** better at one-shotting designs accurately than alternative approaches like pasting screenshots.
+This fork exposes **significantly more layout data** from Figma, enabling AI agents to generate more accurate CSS/HTML that matches the original design.
 
-<h3><a href="https://www.framelink.ai/docs/quickstart?utm_source=github&utm_medium=referral&utm_campaign=readme">See quickstart instructions →</a></h3>
+## What's Added
 
-## Demo
+### Extended Auto Layout Properties
 
-[Watch a demo of building a UI in Cursor with Figma design data](https://youtu.be/6G9yb-LrEqg)
+| Property | Description | CSS Equivalent |
+|----------|-------------|----------------|
+| `rowGap` | Gap between wrapped rows | `row-gap` |
+| `alignContent` | Distribution of wrapped rows | `align-content` |
+| `frameSizing` | How frame sizes on primary/counter axis | `flex-grow`/`flex-shrink` context |
+| `constraints` | Min/max width and height | `min-width`, `max-width`, `min-height`, `max-height` |
+| `boxSizing` | Whether strokes affect layout | `box-sizing` |
+| `clipsContent` | Content overflow behavior | `overflow: hidden` vs `visible` |
+| `reverseZIndex` | Stacking order of children | `flex-direction: *-reverse` context |
 
-[![Watch the video](https://img.youtube.com/vi/6G9yb-LrEqg/maxresdefault.jpg)](https://youtu.be/6G9yb-LrEqg)
+### Full CSS Grid Support
 
-## How it works
+| Property | Description | CSS Equivalent |
+|----------|-------------|----------------|
+| `grid.columns` / `grid.rows` | Grid dimensions | - |
+| `grid.columnGap` / `grid.rowGap` | Grid gaps | `column-gap`, `row-gap` |
+| `grid.templateColumns` / `grid.templateRows` | Column/row sizing | `grid-template-columns`, `grid-template-rows` |
+| `gridPlacement.columnSpan` / `rowSpan` | Cell spanning | `grid-column: span N` |
+| `gridPlacement.columnStart` / `rowStart` | Cell positioning | `grid-column-start`, `grid-row-start` |
+| `gridPlacement.horizontalAlign` / `verticalAlign` | Cell alignment | `justify-self`, `align-self` |
 
-1. Open your IDE's chat (e.g. agent mode in Cursor).
-2. Paste a link to a Figma file, frame, or group.
-3. Ask Cursor to do something with the Figma file—e.g. implement the design.
-4. Cursor will fetch the relevant metadata from Figma and use it to write your code.
+### Prototype Scroll Behavior
 
-This MCP server is specifically designed for use with Cursor. Before responding with context from the [Figma API](https://www.figma.com/developers/api), it simplifies and translates the response so only the most relevant layout and styling information is provided to the model.
+| Property | Description | Use Case |
+|----------|-------------|----------|
+| `scrollBehavior: "fixed"` | Fixed position during scroll | Sticky headers, floating buttons |
+| `scrollBehavior: "sticky"` | Sticky positioning | Scroll-aware sticky elements |
 
-Reducing the amount of context provided to the model helps make the AI more accurate and the responses more relevant.
+## Installation
 
-## Getting Started
+### Option 1: Build from source
 
-Many code editors and other AI clients use a configuration file to manage MCP servers.
+```bash
+git clone https://github.com/vgmakeev/Figma-Context-MCP.git
+cd Figma-Context-MCP
+npm install
+npm run build
+```
 
-The `figma-developer-mcp` server can be configured by adding the following to your configuration file.
-
-> NOTE: You will need to create a Figma access token to use this server. Instructions on how to create a Figma API access token can be found [here](https://help.figma.com/hc/en-us/articles/8085703771159-Manage-personal-access-tokens).
-
-### MacOS / Linux
+Then configure your MCP client:
 
 ```json
 {
   "mcpServers": {
-    "Framelink MCP for Figma": {
+    "Figma Extended": {
+      "command": "node",
+      "args": ["/path/to/Figma-Context-MCP/dist/index.js", "--figma-api-key=YOUR-KEY", "--stdio"]
+    }
+  }
+}
+```
+
+### Option 2: Direct from GitHub
+
+```json
+{
+  "mcpServers": {
+    "Figma Extended": {
       "command": "npx",
-      "args": ["-y", "figma-developer-mcp", "--figma-api-key=YOUR-KEY", "--stdio"]
+      "args": ["-y", "github:vgmakeev/Figma-Context-MCP", "--figma-api-key=YOUR-KEY", "--stdio"]
     }
   }
 }
 ```
 
-### Windows
+## Example Output Comparison
 
+### Original (GLips)
 ```json
 {
-  "mcpServers": {
-    "Framelink MCP for Figma": {
-      "command": "cmd",
-      "args": ["/c", "npx", "-y", "figma-developer-mcp", "--figma-api-key=YOUR-KEY", "--stdio"]
+  "layout": {
+    "mode": "row",
+    "gap": "16px",
+    "wrap": true,
+    "padding": "24px"
+  }
+}
+```
+
+### This Fork (Extended)
+```json
+{
+  "layout": {
+    "mode": "row",
+    "gap": "16px",
+    "rowGap": "24px",
+    "wrap": true,
+    "alignContent": "space-between",
+    "padding": "24px",
+    "constraints": {
+      "minWidth": 320,
+      "maxWidth": 1200
+    },
+    "clipsContent": true,
+    "frameSizing": {
+      "primary": "auto",
+      "counter": "fixed"
     }
   }
 }
 ```
 
-Or you can set `FIGMA_API_KEY` and `PORT` in the `env` field.
+## When to Use This Fork
 
-If you need more information on how to configure the Framelink MCP for Figma, see the [Framelink docs](https://www.framelink.ai/docs/quickstart?utm_source=github&utm_medium=referral&utm_campaign=readme).
+Use this fork if you need:
+- Accurate responsive layouts with min/max constraints
+- CSS Grid implementations from Figma
+- Proper handling of flex-wrap with row gaps
+- Prototype scroll behavior (sticky headers, fixed elements)
+- Precise overflow control
 
-## Star History
+For basic layouts without these requirements, the original [GLips/Figma-Context-MCP](https://github.com/GLips/Figma-Context-MCP) works fine.
 
-<a href="https://star-history.com/#GLips/Figma-Context-MCP"><img src="https://api.star-history.com/svg?repos=GLips/Figma-Context-MCP&type=Date" alt="Star History Chart" width="600" /></a>
+## Credits
 
-## Learn More
-
-The Framelink MCP for Figma is simple but powerful. Get the most out of it by learning more at the [Framelink](https://framelink.ai?utm_source=github&utm_medium=referral&utm_campaign=readme) site.
+Based on [Framelink MCP for Figma](https://github.com/GLips/Figma-Context-MCP) by [@glipsman](https://twitter.com/glipsman).
