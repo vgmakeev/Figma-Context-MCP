@@ -82,6 +82,17 @@ Then configure your MCP client:
 }
 ```
 
+### Claude Code
+
+Add the server via Claude Code CLI (local scope by default):
+
+```bash
+claude mcp add --transport stdio figma-extended -- \
+  npx -y github:vgmakeev/Figma-Context-MCP --figma-api-key=YOUR-KEY --stdio
+```
+
+Tip: use `--scope project` to generate a shared `.mcp.json` in the repo root.
+
 ## Example Output Comparison
 
 ### Original (GLips)
