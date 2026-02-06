@@ -47,36 +47,18 @@ This fork exposes **significantly more layout data** from Figma, enabling AI age
 
 ## Installation
 
-### Option 1: Build from source
+> **Note:** You need a [Figma API access token](https://help.figma.com/hc/en-us/articles/8085703771159-Manage-personal-access-tokens). Replace `YOUR-KEY` below with your token.
 
-```bash
-git clone https://github.com/vgmakeev/Figma-Context-MCP.git
-cd Figma-Context-MCP
-npm install
-npm run build
-```
+### Cursor / Windsurf / any MCP client (JSON config)
 
-Then configure your MCP client:
-
-```json
-{
-  "mcpServers": {
-    "Figma Extended": {
-      "command": "node",
-      "args": ["/path/to/Figma-Context-MCP/dist/index.js", "--figma-api-key=YOUR-KEY", "--stdio"]
-    }
-  }
-}
-```
-
-### Option 2: Direct from GitHub
+Add to your MCP configuration file (e.g. `.cursor/mcp.json`):
 
 ```json
 {
   "mcpServers": {
     "Figma Extended": {
       "command": "npx",
-      "args": ["-y", "github:vgmakeev/Figma-Context-MCP", "--figma-api-key=YOUR-KEY", "--stdio"]
+      "args": ["-y", "figma-context-mcp-extended", "--figma-api-key=YOUR-KEY", "--stdio"]
     }
   }
 }
@@ -84,14 +66,34 @@ Then configure your MCP client:
 
 ### Claude Code
 
-Add the server via Claude Code CLI (local scope by default):
-
 ```bash
 claude mcp add --transport stdio figma-extended -- \
-  npx -y github:vgmakeev/Figma-Context-MCP --figma-api-key=YOUR-KEY --stdio
+  npx -y figma-context-mcp-extended --figma-api-key=YOUR-KEY --stdio
 ```
 
-Tip: use `--scope project` to generate a shared `.mcp.json` in the repo root.
+Use `--scope user` to make the server available across all your projects, or `--scope project` to share a `.mcp.json` with the team.
+
+### Build from source
+
+```bash
+git clone https://github.com/vgmakeev/Figma-Context-MCP.git
+cd Figma-Context-MCP
+pnpm install
+pnpm build
+```
+
+Then point your MCP client to the local build:
+
+```json
+{
+  "mcpServers": {
+    "Figma Extended": {
+      "command": "node",
+      "args": ["/path/to/Figma-Context-MCP/dist/bin.js", "--figma-api-key=YOUR-KEY", "--stdio"]
+    }
+  }
+}
+```
 
 ## Example Output Comparison
 

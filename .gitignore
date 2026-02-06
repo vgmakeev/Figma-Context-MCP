@@ -4,7 +4,7 @@ node_modules
 package-lock.json
 
 # Build output
-dist
+# dist — committed so `npx github:vgmakeev/Figma-Context-MCP` works
 
 # Environment variables
 .env

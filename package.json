@@ -1,12 +1,12 @@
 {
-  "name": "figma-developer-mcp",
+  "name": "figma-context-mcp-extended",
   "version": "0.6.4",
-  "mcpName": "io.github.GLips/Figma-Context-MCP",
-  "description": "Give your coding agent access to your Figma data. Implement designs in any framework in one-shot.",
+  "mcpName": "io.github.vgmakeev/Figma-Context-MCP",
+  "description": "Figma MCP with extended Auto Layout, CSS Grid, and prototype scroll data for AI agents.",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "figma-developer-mcp": "dist/bin.js"
+    "figma-context-mcp-extended": "dist/bin.js"
   },
   "files": [
     "dist",
@@ -42,9 +42,9 @@
   "packageManager": "pnpm@10.10.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/GLips/Figma-Context-MCP.git"
+    "url": "git+https://github.com/vgmakeev/Figma-Context-MCP.git"
   },
-  "homepage": "https://www.framelink.ai",
+  "homepage": "https://github.com/vgmakeev/Figma-Context-MCP",
   "keywords": [
     "figma",
     "mcp",
